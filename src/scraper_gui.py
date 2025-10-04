@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from tkinter import ttk, messagebox, filedialog
 
 from src.browser_manager import BrowserManager
+from src.common import message_queue
 from src.scrapers.keywords_search_scraper import KeywordsSearchScraper
 from src.utils.dir_util import get_exe_dir_storage
 
@@ -31,6 +32,7 @@ class ScraperGUI:
         self.setup_ui_config()
         self.init_ui()
         self.bind_shortcuts()
+        self.check_message_queue()
 
     def load_runtime_data(self):
         """读取JSON存储文件，如果不存在则使用默认值"""
@@ -182,6 +184,33 @@ class ScraperGUI:
         if messagebox.askyesno("确认退出", "确定要退出程序吗？"):
             self.root.destroy()
             sys.exit(0)
+
+    # 新增：检查消息队列，处理后台线程的弹窗请求（主线程执行）
+    def check_message_queue(self):
+        # 循环处理队列中所有待处理的请求
+        while not message_queue.empty():
+            # 从队列取出请求：(弹窗类型, 弹窗标题, 弹窗内容)
+            msg_type, title, content = message_queue.get()
+
+            # 根据不同类型处理弹窗
+            if msg_type == "wait":  # 你的"等待用户操作"类型
+                messagebox.showinfo(
+                    title,
+                    f"{content}\n\n请在浏览器中完成操作后，\n点击本窗口的确定按钮继续..."
+                )
+                print("用户已确认操作完成，继续执行后续流程...\n")
+
+            elif msg_type == "info":  # 通用信息弹窗（可复用）
+                messagebox.showinfo(title, content)
+
+            elif msg_type == "error":  # 通用错误弹窗（可复用）
+                messagebox.showerror(title, content)
+
+            elif msg_type == "warning":  # 通用警告弹窗（可复用）
+                messagebox.showwarning(title, content)
+
+        # 每100毫秒检查一次队列（递归调用，持续监听）
+        self.root.after(100, self.check_message_queue)
 
 
 def run_task(browser_path, keywords, limit_int):

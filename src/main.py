@@ -4,8 +4,6 @@ import sys
 if not hasattr(sys, '_MEIPASS'):
     sys._MEIPASS: str = ""  # type: ignore[attr-defined]
 
-from src.scrapers import live_gui
-
 
 def main() -> None:
     try:
