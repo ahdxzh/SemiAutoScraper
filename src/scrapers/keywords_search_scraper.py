@@ -131,6 +131,9 @@ class KeywordsSearchScraper:
                 wait_for_user_action("请先完成登录操作")
                 if not check_login_status(page):
                     raise Exception("用户未完成登录，无法继续执行任务")
+                else:
+                    # 登录完成后重新初始化页面
+                    self._initialize_page()
             logger.info("登录状态验证通过")
 
             # 检测主页面验证码
