@@ -213,7 +213,6 @@ class ScraperGUI:
 
     # 新增：检查消息队列，处理后台线程的弹窗请求（主线程执行）
     def check_message_queue(self):
-        print("开始监听" + str(uuid.uuid4()))
         while not request_queue.empty():
             # 统一参数结构：(消息类型, 请求ID, 标题, 内容)
             # 确保所有类型的请求都遵循这个结构，避免解包错误
