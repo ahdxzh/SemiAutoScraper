@@ -4,6 +4,7 @@ from typing import Optional, List, Dict
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from src.utils.captcha_util import with_captcha_handling, handle_captcha
+from src.utils.csv_util import save_single_dict_to_csv
 from src.utils.extract_util import find_ancestor_texts_with_value
 from src.utils.page_operate import screenshot_element, scroll_multiple_times
 
@@ -159,7 +160,7 @@ class AnchorProcessor:
         order_amount = find_ancestor_texts_with_value(new_page, "合计", order_card)
         self.current_data["报价"] = order_amount
 
-    def process_anchor(self, i: int, rank: int):
+    def process_single_task(self, i: int, rank: int):
         """处理单个主播的完整流程"""
         new_page: Optional[Page] = None
         # 重置当前主播数据
@@ -214,3 +215,5 @@ class AnchorProcessor:
         finally:
             if new_page and not new_page.is_closed():
                 new_page.close()
+
+        save_single_dict_to_csv(self.current_data)
