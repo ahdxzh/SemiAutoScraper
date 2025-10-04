@@ -9,16 +9,18 @@ def save_dict_list_to_csv(
         data_list: List[Dict],
         save_path: str = "outPut/anchor_data.csv",
         sort_fields: bool = False,
-        sort_key: Callable = None
+        sort_key: Callable = None,
+        append: bool = False  # 新增参数：是否追加模式
 ) -> None:
     """
-    将字典列表数据保存到CSV文件，支持控制字段排序
+    将字典列表数据保存到CSV文件，支持控制字段排序和追加模式
 
     参数:
         data_list: 要保存的数据列表，每个元素为字典
         save_path: 保存的文件路径，默认值为"outPut/anchor_data.csv"
         sort_fields: 是否对字段进行排序，默认为False
         sort_key: 排序的key函数，仅当sort_fields为True时有效，默认为None（自然排序）
+        append: 是否以追加模式写入，True表示追加，False表示覆盖，默认为False
 
     返回:
         无返回值
@@ -59,34 +61,50 @@ def save_dict_list_to_csv(
     # 确保输出目录存在
     Path(save_path).parent.mkdir(parents=True, exist_ok=True)
 
-    # 写入CSV文件
-    with open(save_path, mode='w', encoding='utf-8-sig', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        for data in data_list:
-            writer.writerow(data)
+    # 检查文件是否存在（用于追加模式）
+    file_exists = os.path.exists(save_path) and os.path.getsize(save_path) > 0
 
-    print(f"✅ 数据已成功保存到 {save_path}，共 {len(data_list)} 条记录")
+    # 写入CSV文件
+    # 追加模式且文件存在时，不写表头；否则写入表头
+    mode = 'a' if append else 'w'
+    with open(save_path, mode=mode, encoding='utf-8-sig', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+
+        # 只有非追加模式或文件不存在时才写表头
+        if not append or not file_exists:
+            writer.writeheader()
+
+        # 写入数据
+        writer.writerows(data_list)
+
+    print(f"✅ 数据已成功{'追加到' if append else '保存到'} {save_path}，共 {len(data_list)} 条记录")
+
+
+# 新增：单条数据保存函数（内部调用批量保存函数）
+def save_single_dict_to_csv(
+        data: Dict,
+        save_path: str = "outPut/anchor_data.csv",
+        sort_fields: bool = False,
+        sort_key: Callable = None,
+        append: bool = True  # 单条保存默认使用追加模式
+) -> None:
+    """保存单条字典数据到CSV（默认追加模式）"""
+    if not data:
+        print("数据为空，不进行保存")
+        return
+    save_dict_list_to_csv(
+        data_list=[data],
+        save_path=save_path,
+        sort_fields=sort_fields,
+        sort_key=sort_key,
+        append=append
+    )
 
 
 if __name__ == '__main__':
     # 准备测试数据
-    data = [
-        {"name": "张三", "age": 25},
-        {"name": "李四", "age": 30, "city": "北京"},
-        {"name": "王五", "gender": "女", "score": 95}
-    ]
+    data1 = {"name": "张三", "age": 25}
+    data2 = {"name": "李四", "age": 26}
 
-    # 测试1: 默认排序（按字母顺序）
-    save_dict_list_to_csv(data, "data/sorted_people.csv")
-
-    # 测试2: 不排序（按字段首次出现顺序）
-    save_dict_list_to_csv(data, "data/unsorted_people.csv", sort_fields=False)
-
-    # 测试3: 自定义排序（按字段长度）
-    save_dict_list_to_csv(
-        data,
-        "data/custom_sorted_people.csv",
-        sort_fields=True,
-        sort_key=lambda x: len(x)  # 按字段名长度排序
-    )
+    save_single_dict_to_csv(data1)
+    save_single_dict_to_csv(data2)
