@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict
 
 from playwright.sync_api import Page
 
@@ -84,18 +84,24 @@ class AnchorProcessor:
             self.current_data["视频链接"] = copied_text
         except Exception as e:
             print("权限问题:", e)
+        finally:
+            # 关闭笔记详情
+            self.anchor_page.locator(".d-drawer-header > span > svg").first.click(timeout=5000)
 
     @with_captcha_handling()
     def _take_anchor_overview_screenshot(self):
         """打开数据概览"""
-        self.anchor_page.get_by_role("tab", name="数据概览").click()
+        data_overview_tab = self.anchor_page.locator(
+            "div.d-tabs-headers-wrapper div.d-tabs-header:has(h6.d-tabs-header-label:text('数据概览'))"
+        )
+        data_overview_tab.click()
         anchor_overview_wrapper = self.anchor_page.locator(".blogger-detail-container")
         anchor_overview_wrapper.wait_for(state="visible")
         screenshot_path = f"outPut/数据概览/{self.rank}_{self.anchor_name}.png"
         screenshot_element(
             page=self.anchor_page,
-            locator=anchor_overview_wrapper,
             save_path=screenshot_path,
+            crop_top=100,
             timeout=5000
         )
 
@@ -112,7 +118,11 @@ class AnchorProcessor:
 
     @with_captcha_handling()
     def _take_anchor_fans_screenshot(self):
-        self.anchor_page.get_by_role("tab", name="粉丝分析").click()
+        fans_tab = self.anchor_page.locator(
+            "div.d-tabs-headers-wrapper div.d-tabs-header:has(h6.d-tabs-header-label:text('粉丝分析'))"
+        )
+        fans_tab.click()
+
         print("将粉丝画像顶部对齐")
         scroll_multiple_times(self.anchor_page, total_scrolls=1, key_presses_per_scroll=18)
         anchor_overview_wrapper = self.anchor_page.locator(".blogger-detail-container")
@@ -120,9 +130,9 @@ class AnchorProcessor:
         screenshot_path = f"outPut/粉丝画像/{self.rank}_{self.anchor_name}.png"
         screenshot_element(
             page=self.anchor_page,
-            locator=anchor_overview_wrapper,
             save_path=screenshot_path,
-            timeout=5000
+            timeout=5000,
+            crop_top=100
         )
 
         self.current_data["性别"] = find_ancestor_texts_with_value(self.anchor_page, "性别分布",
@@ -134,7 +144,6 @@ class AnchorProcessor:
 
     def process_single_task(self, i: int, rank: int):
         """处理单个主播的完整流程"""
-        new_page: Optional[Page] = None
         self.rank = rank
         self.current_data = {"排名": str(rank)}
 
@@ -162,7 +171,7 @@ class AnchorProcessor:
             print(f"处理主播过程中发生错误: {str(e)}")
             self.current_data["操作错误信息"] = str(e)
         finally:
-            if new_page and not new_page.is_closed():
-                new_page.close()
+            if self.anchor_page and not self.anchor_page.is_closed():
+                self.anchor_page.close()
 
         save_single_dict_to_csv(self.current_data)
