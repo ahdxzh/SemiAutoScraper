@@ -179,4 +179,5 @@ class AnchorProcessor:
             if self.anchor_page and not self.anchor_page.is_closed():
                 self.anchor_page.close()
 
-        save_single_dict_to_csv(self.current_data, primary_key="达人名称")
+        save_path = "outPut/anchor_data.csv"
+        save_single_dict_to_csv(self.current_data, primary_key="达人名称", save_path=save_path)
