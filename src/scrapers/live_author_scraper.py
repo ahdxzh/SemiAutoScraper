@@ -32,53 +32,43 @@ class AnchorProcessor:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     @with_captcha_handling()
-    def open_anchor_detail(self, i: int):
-        """打开主播详情页面"""
-        target_card = self.page.locator(f".content-cell:nth-child({i}) .video-card-wrapper:first-child").first
-        target_card.wait_for(state="visible", timeout=5000)
-        target_card.click(timeout=5000)
-        print("已打开主播详情页面")
+    def open_first_note_detail(self):
+        """打开笔记案例中第一个笔记"""
+        first_note_card = self.page.locator("div.note-card__mask").first
+        first_note_card.wait_for(state="visible", timeout=5000)
+        first_note_card.click(timeout=5000)
+        print("已打开笔记详情页面")
 
     @with_captcha_handling()
     def take_anchor_card_screenshot(self, rank: int, anchor_name: str):
-        card_wrapper = None
+        card_wrapper = self.page.locator("div.d-drawer-content")
+        card_wrapper.wait_for(state="visible")
+        # 截图曝光量
+        screenshot_path = f"outPut/曝光量/{rank}_{anchor_name}.png"
+        screenshot_element(
+            page=self.page,
+            locator=card_wrapper,
+            save_path=screenshot_path,
+            timeout=5000
+        )
+
+        self.current_data["视频播放数"] = find_ancestor_texts_with_value(self.page, "曝光量", card_wrapper)
+        self.current_data["粉丝数"] = find_ancestor_texts_with_value(self.page, "粉丝数", card_wrapper)
+        self.current_data["视频发布时间"] = self.page.locator(
+            "div.note-create-time span:nth-child(2)").first.text_content().strip()
+        # 复制笔记链接
+        copy_link = self.page.locator("div.copy-note-link-container span").first
+        copy_link.click(timeout=5000)
+
+        # 尝试读取剪贴板
         try:
-            """截图主播卡片元素"""
-            # 1. 先定位卡片容器，并等待容器加载（确保容器存在于DOM中）
-            card_wrapper = self.page.locator(".video-card__wrapper:has(video[autoplay])")
-            card_wrapper.wait_for(state="visible")
+            copied_text = self.page.evaluate("""async () => {
+                return await navigator.clipboard.readText();
+            }""")
+            self.current_data["视频链接"] = copied_text
 
-            # 2. 在容器内定位带autoplay的视频，并等待视频可见
-            autoplay_video = card_wrapper.locator("video[autoplay]")
-            autoplay_video.wait_for(state="visible")
-
-            screenshot_path = f"outPut/曝光量/{rank}_{anchor_name}.png"
-            screenshot_element(
-                page=self.page,
-                locator=card_wrapper,
-                save_path=screenshot_path,
-                timeout=5000
-            )
-            link_element = card_wrapper.locator("a:has-text('打开视频')").first
-            video_url = link_element.get_attribute("href")
-            if video_url:
-                # 处理URL中的特殊字符（如&amp;可能需要转换为&）
-                video_url = video_url.replace("&amp;", "&")
-                self.current_data["视频链接"] = video_url
-                print(f"成功提取视频URL: {video_url[:50]}...")  # 只显示前50字符避免过长
-
-            # 替代原有的视频播放数、点赞数、评论数提取逻辑
-            data_list = card_wrapper.locator(".detail-container").first
-            video_views = find_ancestor_texts_with_value(self.page, "视频播放数", data_list)
-            release_time = data_list.get_by_text("发布日期").first.text_content().replace("发布日期: ", "")
-            self.current_data["视频播放数"] = video_views
-            self.current_data["发布日期"] = release_time
         except Exception as e:
-            print(f"获取主播详情发生异常：{str(e)}")
-            raise e
-        finally:
-            card_wrapper.locator(".i-icon-xt-icon-close").click()
-            print("关闭主播详情页面")
+            print("权限问题:", e)
 
     @with_captcha_handling()
     def open_anchor_new_page(self, anchor_card) -> Page:
@@ -167,16 +157,18 @@ class AnchorProcessor:
         self.current_data = {"排名": str(rank)}
 
         try:
-            print("\n----- 主播处理流程1：获取主播信息 -----")
-            anchor_card = self.page.locator(f".content-cell:nth-child({i}) .author-nickname:first-child").first
+            print("\n----- 主播处理流程1：进入主播详情 -----")
+            anchor_card = self.page.locator(
+                f"div.blogger-list_list tr:nth-child({i}) div.kol-info_detail > div:nth-child(1) > span").first
             anchor_name = anchor_card.text_content().strip()
             self.current_data["达人名称"] = anchor_name
-            print(f"处理主播: {anchor_name}")
+            anchor_card.click(timeout=5000)
+            print(f"开始处理主播: {anchor_name}")
 
-            print("\n----- 主播处理流程2：点开主播详情 -----")
-            self.open_anchor_detail(i)
+            print("\n----- 主播处理流程2：点开主播笔记案例 -----")
+            self.open_first_note_detail()
 
-            print("\n----- 主播处理流程3：截图主播卡片元素 -----")
+            print("\n----- 主播处理流程3：复制笔记链接 -----")
             self.take_anchor_card_screenshot(rank, anchor_name)
 
             print("\n----- 主播处理流程4：打开详情新页面 -----")
