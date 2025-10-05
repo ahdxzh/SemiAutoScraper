@@ -27,7 +27,7 @@ class AnchorProcessor:
         directories = [
             "outPut/曝光量",
             "outPut/数据概览",
-            "outPut/粉丝分析"
+            "outPut/粉丝画像"
         ]
         for dir_path in directories:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
@@ -101,7 +101,7 @@ class AnchorProcessor:
         screenshot_element(
             page=self.anchor_page,
             save_path=screenshot_path,
-            crop_top=100,
+            crop_top=50,
             timeout=5000
         )
 
@@ -132,7 +132,7 @@ class AnchorProcessor:
             page=self.anchor_page,
             save_path=screenshot_path,
             timeout=5000,
-            crop_top=100
+            crop_top=50
         )
 
         self.current_data["性别"] = find_ancestor_texts_with_value(self.anchor_page, "性别分布",
