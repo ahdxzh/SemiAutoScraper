@@ -1,6 +1,8 @@
+import re
 from pathlib import Path
 from typing import Dict
 
+import pyperclip
 from playwright.sync_api import Page
 
 from src.utils.captcha_util import with_captcha_handling
@@ -72,21 +74,24 @@ class AnchorProcessor:
 
     @with_captcha_handling()
     def _copy_note_link(self):
-        # 复制笔记链接
-        copy_link = self.anchor_page.locator("div.copy-note-link-container span").first
-        copy_link.click(timeout=5000)
+        # 点击复制链接按钮
+        self.anchor_page.locator("div.copy-note-link-container span").first.click(timeout=5000)
 
-        # 尝试读取剪贴板
+        # 从系统剪贴板获取
         try:
-            copied_text = self.anchor_page.evaluate("""async () => {
-                return await navigator.clipboard.readText();
-            }""")
-            self.current_data["视频链接"] = copied_text
+            if text := pyperclip.paste():
+                if re.match(r'https?://\S+', text):
+                    self.current_data["视频链接"] = text.strip()
+                    print(f"成功从剪贴板获取链接: {text.strip()}")
+                else:
+                    print("剪贴板内容不是有效的URL")
+            else:
+                print("剪贴板为空")
         except Exception as e:
-            print("权限问题:", e)
-        finally:
-            # 关闭笔记详情
-            self.anchor_page.locator(".d-drawer-header > span > svg").first.click(timeout=5000)
+            print(f"剪贴板访问失败: {str(e)}")
+
+        # 关闭笔记详情
+        self.anchor_page.locator(".d-drawer-header > span > svg").first.click(timeout=5000)
 
     @with_captcha_handling()
     def _take_anchor_overview_screenshot(self):

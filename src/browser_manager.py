@@ -27,7 +27,9 @@ class BrowserManager:
 
     def _launch_browser(self):
         launch_args = [
-            "--enable-clipboard",
+            "--allow-insecure-localhost",
+            "--enable-clipboard-read",
+            "--enable-clipboard-write",
             "--disable-blink-features=AutomationControlled",
             "--no-sandbox",
             "--window-size=1920,1080"
