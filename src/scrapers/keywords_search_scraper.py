@@ -74,6 +74,8 @@ class KeywordsSearchScraper:
             # 可选：触发搜索
             search_input.press('Enter')
             logger.debug("已提交搜索")
+            # 等待搜索结果加载
+            self.page.wait_for_timeout(2000)
 
         except Exception as e:
             logger.error(f"搜索操作失败: {str(e)}")
@@ -82,13 +84,14 @@ class KeywordsSearchScraper:
         return True
 
     def _process_single_page(self, page_number, processor, limit_start, limit_end, current_rank):
-        """处理单页数据，支持范围参数"""
+        """处理单页数据，支持范围参数，修复重复编号问题"""
         page = self.page
-        logger.info(f"开始处理第{page_number}页数据")
+        logger.info(f"开始处理第{page_number}页数据，当前排名: {current_rank['value']}")
 
         try:
             # 跳转到目标页
             jump_to_target_page(page, page_number)
+            page.wait_for_timeout(1000)  # 增加页面跳转后的等待时间
 
             # 页面准备操作
             page.locator("body").focus()
@@ -97,22 +100,54 @@ class KeywordsSearchScraper:
             scroll_multiple_times(page)
             logger.info(f"第{page_number}页滚动完成，开始处理条目")
 
-            # 处理当前页的每个条目
-            for item_number in range(1, self.PAGE_SIZE + 1):
-                # 检查是否超出范围上限
-                if current_rank["value"] > limit_end:
-                    logger.info(f"已达到设置的上限{limit_end}条，停止处理")
-                    return False  # 已达到上限，停止处理
+            # 计算当前页的起始和结束排名
+            page_start_rank = (page_number - 1) * self.PAGE_SIZE + 1
+            page_end_rank = page_number * self.PAGE_SIZE
+            logger.debug(f"第{page_number}页理论排名范围: {page_start_rank}-{page_end_rank}")
+            logger.debug(f"当前处理排名: {current_rank['value']}, 目标范围: {limit_start}-{limit_end}")
 
-                # 只处理范围内的条目
-                if current_rank["value"] >= limit_start:
-                    page.locator("body").focus()
-                    processor.process_single_task(item_number, current_rank["value"])
+            # 检查当前页是否需要处理
+            if page_end_rank < limit_start:
+                logger.info(f"第{page_number}页完全在目标范围之前，跳过处理")
+                # 更新当前排名，但不超过限制范围的起始值
+                current_rank["value"] = min(page_end_rank + 1, limit_start)
+                return True
+            if page_start_rank > limit_end:
+                logger.info(f"第{page_number}页完全在目标范围之后，停止处理")
+                return False
+
+            # 计算当前页需要处理的条目范围
+            # 确保处理范围在目标范围内
+            actual_start = max(page_start_rank, limit_start)
+            actual_end = min(page_end_rank, limit_end)
+
+            # 计算条目的索引位置（相对于当前页）
+            start_item = actual_start - page_start_rank + 1
+            end_item = actual_end - page_start_rank + 1
+            logger.debug(f"第{page_number}页实际处理排名: {actual_start}-{actual_end}")
+            logger.debug(f"第{page_number}页处理条目索引: {start_item}-{end_item}")
+
+            # 处理当前页的目标条目
+            for item_number in range(start_item, end_item + 1):
+                # 双重检查是否超出范围上限
+                if current_rank["value"] > limit_end:
+                    logger.info(f"已超出设置的上限{limit_end}条，停止处理")
+                    return False
+
+                # 确保当前排名与计算的实际排名一致
+                if current_rank["value"] != actual_start + (item_number - start_item):
+                    logger.warning(
+                        f"排名不一致: 当前{current_rank['value']}，预期{actual_start + (item_number - start_item)}")
+                    current_rank["value"] = actual_start + (item_number - start_item)
+
+                logger.debug(f"处理第{current_rank['value']}条数据（第{page_number}页第{item_number}项）")
+                page.locator("body").focus()
+                processor.process_single_task(item_number, current_rank["value"])
 
                 current_rank["value"] += 1
                 time.sleep(self.TASK_INTERVAL)
 
-            logger.info(f"第{page_number}页数据处理完成")
+            logger.info(f"第{page_number}页数据处理完成，当前排名更新为: {current_rank['value']}")
             return True  # 继续处理下一页
 
         except Exception as e:
@@ -124,6 +159,10 @@ class KeywordsSearchScraper:
         # 从范围对象中提取起始值和结束值
         limit_start = limit_range.start
         limit_end = limit_range.end
+
+        # 验证输入范围的有效性
+        if limit_start < 1 or limit_end < limit_start:
+            raise ValueError(f"无效的范围参数: start={limit_start}, end={limit_end}")
 
         logger.info(
             f"\n===== 开始执行任务：搜索关键词 '{keyword}'，"
@@ -160,17 +199,17 @@ class KeywordsSearchScraper:
 
             # 分页处理列表数据
             logger.info("----- 流程步骤4：分页处理列表数据 -----")
-            # 根据范围结束值计算总页数
-            total_pages = (limit_end + self.PAGE_SIZE - 1) // self.PAGE_SIZE
-            logger.info(f"预计需要处理{total_pages}页数据")
-            processor = AnchorProcessor(page)
+            # 计算需要处理的起始页和结束页
+            start_page = (limit_start - 1) // self.PAGE_SIZE + 1
+            end_page = (limit_end - 1) // self.PAGE_SIZE + 1
+            logger.info(f"目标范围涉及页码: 第{start_page}页 - 第{end_page}页")
 
-            # 关键修改：根据起始值初始化current_rank
+            processor = AnchorProcessor(page)
             current_rank = {"value": limit_start}  # 从起始值开始计数
             logger.info(f"从第{limit_start}条开始处理，到第{limit_end}条结束")
 
-            # 处理每一页
-            for page_number in range(1, total_pages + 1):
+            # 只处理需要的页面范围
+            for page_number in range(start_page, end_page + 1):
                 continue_processing = self._process_single_page(
                     page_number,
                     processor,
@@ -180,6 +219,8 @@ class KeywordsSearchScraper:
                 )
                 if not continue_processing:
                     break
+
+            logger.info(f"任务执行完成，最终处理到第{current_rank['value'] - 1}条数据")
 
         except TimeoutError as te:
             logger.error(f"操作超时错误: {str(te)}", exc_info=True)
