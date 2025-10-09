@@ -1,7 +1,6 @@
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 
-
 def jump_to_target_page(page: Page, target_page: int,
                         input_selector=".pagination .xt-input-number__input .el-input__inner") -> bool:
     """
