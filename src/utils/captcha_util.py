@@ -4,6 +4,7 @@ from functools import wraps
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
+from src.common import STEP_SLEEP_MIN_TIME, STEP_SLEEP_MAX_TIME
 from src.utils.page_status_check import check_captcha_status
 from src.utils.page_user_interaction import wait_for_user_action
 
@@ -15,7 +16,7 @@ def handle_captcha(page: Page):
         page.wait_for_load_state("networkidle", timeout=10000)
 
 
-def with_captcha_handling(min_sleep=1, max_sleep=3):
+def with_captcha_handling(min_sleep=STEP_SLEEP_MIN_TIME, max_sleep=STEP_SLEEP_MAX_TIME):
     """
     装饰器：自动识别函数中的Page参数，异常时检查该页面的验证码
     代理执行方法时会在指定范围内随机休眠一段时间
