@@ -29,7 +29,7 @@ class ProcessingRange:
 class KeywordsSearchScraper:
     """精简结构版关键词搜索爬虫"""
     PAGE_SIZE = 20
-    SEARCH_WAIT_SECONDS = 0
+    SEARCH_WAIT_SECONDS = 60
     TASK_INTERVAL = 0.5
     PAGE_TEXT = "达人信息"
     TARGET_URL = "https://www.xingtu.cn/ad/creator/market"
