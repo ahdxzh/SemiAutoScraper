@@ -109,7 +109,6 @@ class KeywordsSearchScraperBase(ABC):
         return start, end
 
     def _process_page(self, page_number, limit_range, processor):
-        """统一的翻页与循环逻辑"""
         jump_to_target_page(self.page, page_number, input_selector=self.PAGE_INPUT_SELECTOR)
         self.page.get_by_text(self.PAGE_TEXT).first.click()
         scroll_multiple_times(self.page)
@@ -127,10 +126,12 @@ class KeywordsSearchScraperBase(ABC):
         start_item = max(1, limit_range.start - start_rank + 1)
         end_item = min(self.PAGE_SIZE, limit_range.end - start_rank + 1)
 
+        last_processed_rank = None
         for item_index in range(start_item, end_item + 1):
             rank = start_rank + item_index - 1
             self.page.locator("body").focus()
             self.process_single_item(processor, item_index, rank)
+            last_processed_rank = rank
             time.sleep(self.TASK_INTERVAL)
 
-        return end_rank
+        return last_processed_rank or end_rank
