@@ -1,9 +1,10 @@
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from src.utils.captcha_util import with_captcha_handling, handle_captcha
+from src.utils.csv_util import save_single_dict_to_csv
 from src.utils.extract_util import find_ancestor_texts_with_value
 from src.utils.page_operate import screenshot_element, scroll_multiple_times
 
@@ -11,11 +12,8 @@ from src.utils.page_operate import screenshot_element, scroll_multiple_times
 class AnchorProcessor:
     def __init__(self, page: Page):
         self.page = page
-        # 存储所有主播数据的列表
-        self.data_list: List[Dict[str, str]] = []
         # 当前处理的主播数据
         self.current_data: Dict[str, str] = {}
-
         # 确保输出目录存在
         self._ensure_directories()
 
@@ -31,7 +29,7 @@ class AnchorProcessor:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     @with_captcha_handling()
-    def open_anchor_detail(self, i: int):
+    def _open_anchor_detail(self, i: int):
         """打开主播详情页面"""
         target_card = self.page.locator(f".content-cell:nth-child({i}) .video-card-wrapper:first-child").first
         target_card.wait_for(state="visible", timeout=5000)
@@ -39,7 +37,7 @@ class AnchorProcessor:
         print("已打开主播详情页面")
 
     @with_captcha_handling()
-    def take_anchor_card_screenshot(self, rank: int, anchor_name: str):
+    def _take_anchor_card_screenshot(self, rank: int, anchor_name: str):
         card_wrapper = None
         try:
             """截图主播卡片元素"""
@@ -80,7 +78,7 @@ class AnchorProcessor:
             print("关闭主播详情页面")
 
     @with_captcha_handling()
-    def open_anchor_new_page(self, anchor_card) -> Page:
+    def _open_anchor_new_page(self, anchor_card) -> Page:
         """打开主播新页面"""
         with self.page.expect_popup() as popup_info:
             anchor_card.click(timeout=5000)
@@ -91,7 +89,7 @@ class AnchorProcessor:
         return new_page
 
     @with_captcha_handling()
-    def extract_anchor_new_page(self, new_page: Page):
+    def _extract_anchor_new_page(self, new_page: Page):
         handle_captcha(new_page)
         anchor_detail_card = new_page.locator(".main").first
         # 粉丝数 → 明确为粉丝数量
@@ -111,7 +109,7 @@ class AnchorProcessor:
         self.current_data["行业标签"] = industry_tag
 
     @with_captcha_handling()
-    def switch_to_connect_user_tab(self, new_page: Page):
+    def _switch_to_connect_user_tab(self, new_page: Page):
         """切换到连接用户标签并执行相关操作"""
         connect_user_tab = new_page.get_by_role("tab", name="连接用户")
         connect_user_tab.click()
@@ -122,7 +120,7 @@ class AnchorProcessor:
         return True
 
     @with_captcha_handling()
-    def take_anchor_home_screenshot(self, new_page: Page, rank: int, anchor_name: str):
+    def _take_anchor_home_screenshot(self, new_page: Page, rank: int, anchor_name: str):
         """截图达人主页"""
         screenshot_path = f"outPut/达人主页/{rank}_{anchor_name}.png"
         screenshot_element(
@@ -139,7 +137,7 @@ class AnchorProcessor:
         self.current_data["连接用户类型"] = fan_type
 
     @with_captcha_handling()
-    def click_order_button(self, new_page: Page, rank: int, anchor_name: str):
+    def _click_order_button(self, new_page: Page, rank: int, anchor_name: str):
         """点击下单按钮并截图"""
         order_button_selector = "div[data-btm='add']:has(div.desc:has-text(' 21-60s视频 ')) button:has-text('下单')"
         order_button = new_page.locator(order_button_selector)
@@ -159,7 +157,7 @@ class AnchorProcessor:
         order_amount = find_ancestor_texts_with_value(new_page, "合计", order_card)
         self.current_data["报价"] = order_amount
 
-    def process_anchor(self, i: int, rank: int):
+    def process_single_task(self, i: int, rank: int):
         """处理单个主播的完整流程"""
         new_page: Optional[Page] = None
         # 重置当前主播数据
@@ -173,44 +171,42 @@ class AnchorProcessor:
             print(f"处理主播: {anchor_name}")
 
             print("\n----- 主播处理流程2：点开主播详情 -----")
-            self.open_anchor_detail(i)
+            self._open_anchor_detail(i)
 
             print("\n----- 主播处理流程3：截图主播卡片元素 -----")
-            self.take_anchor_card_screenshot(rank, anchor_name)
+            self._take_anchor_card_screenshot(rank, anchor_name)
 
             print("\n----- 主播处理流程4：打开详情新页面 -----")
-            new_page = self.open_anchor_new_page(anchor_card)
+            new_page = self._open_anchor_new_page(anchor_card)
 
             # 主动检查一次新页面（非异常场景）
             print("\n----- 主播处理流程5：检测新页面验证码，然后解析主播信息 -----")
-            self.extract_anchor_new_page(new_page)
+            self._extract_anchor_new_page(new_page)
 
             print("\n----- 主播处理流程6：切换到'连接用户'标签 -----")
             connect_user_tab = new_page.get_by_role("tab", name="连接用户")
             if connect_user_tab.count() == 0:
                 print("⚠️ '连接用户'标签不存在，跳过该步骤")
             else:
-                self.switch_to_connect_user_tab(new_page)
+                self._switch_to_connect_user_tab(new_page)
 
             print("\n----- 主播处理流程7：截图达人主页 -----")
-            self.take_anchor_home_screenshot(new_page, rank, anchor_name)
+            self._take_anchor_home_screenshot(new_page, rank, anchor_name)
 
             print("\n----- 主播处理流程8：点击下单按钮 -----")
             try:
-                self.click_order_button(new_page, rank, anchor_name)
+                self._click_order_button(new_page, rank, anchor_name)
             except PlaywrightTimeoutError:
                 print("下单按钮未找到，已自动跳过该步骤")
             except Exception as e:
                 print(f"处理下单按钮时发生错误：{str(e)}，已跳过该步骤")
 
-            # 将当前主播数据添加到列表
-            self.data_list.append(self.current_data.copy())
-            print(f"\n===== 任务 '{anchor_name}' 执行完成 =====")
-
         except Exception as e:
             print(f"处理主播过程中发生错误: {str(e)}")
             self.current_data["操作错误信息"] = str(e)
-            self.data_list.append(self.current_data.copy())
         finally:
             if new_page and not new_page.is_closed():
                 new_page.close()
+
+        save_path = "outPut/数据总结.csv"
+        save_single_dict_to_csv(self.current_data, primary_key="达人名称", save_path=save_path)

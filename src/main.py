@@ -1,10 +1,10 @@
 import sys
 
+from src.scraper_gui import start_gui
+
 # 为PyInstaller的_MEIPASS添加类型提示
 if not hasattr(sys, '_MEIPASS'):
     sys._MEIPASS: str = ""  # type: ignore[attr-defined]
-
-from src.scrapers import live_gui
 
 
 def main() -> None:
@@ -16,7 +16,7 @@ def main() -> None:
 
         # 启动GUI
         print("\n启动图形界面...")
-        live_gui.start_gui()
+        start_gui()
 
     except Exception as e:
         print(f"\n运行错误: {str(e)}")
