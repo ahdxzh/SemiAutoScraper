@@ -110,6 +110,7 @@ class KeywordsSearchScraperBase(ABC):
 
     def _process_page(self, page_number, limit_range, processor):
         jump_to_target_page(self.page, page_number, input_selector=self.PAGE_INPUT_SELECTOR)
+        logger.info(f"跳转到第: {page_number}页")
         self.page.get_by_text(self.PAGE_TEXT).first.click()
         scroll_multiple_times(self.page)
 
