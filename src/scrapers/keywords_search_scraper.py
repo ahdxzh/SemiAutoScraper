@@ -33,6 +33,7 @@ class KeywordsSearchScraper:
     TASK_INTERVAL = 0.5
     PAGE_TEXT = "达人信息"
     TARGET_URL = "https://www.xingtu.cn/ad/creator/market"
+    PAGE_INPUT_SELECTOR = ".pagination .xt-input-number__input .el-input__inner"
 
     def __init__(self, browser_manager):
         self.browser_manager = browser_manager
@@ -108,8 +109,7 @@ class KeywordsSearchScraper:
     # ===== 单页处理逻辑 =====
     def _process_page(self, page_number, limit_range, processor):
         """处理单页数据"""
-        input_selector = ".pagination .xt-input-number__input .el-input__inner"
-        jump_to_target_page(self.page, page_number, input_selector=input_selector)
+        jump_to_target_page(self.page, page_number, input_selector=self.PAGE_INPUT_SELECTOR)
         self.page.get_by_text(self.PAGE_TEXT).first.click()
         scroll_multiple_times(self.page)
 
