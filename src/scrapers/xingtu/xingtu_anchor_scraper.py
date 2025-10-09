@@ -35,8 +35,8 @@ class AnchorProcessor:
         self.order_page = None
 
         try:
-            self._load_anchor_info(i)
             self._open_anchor_detail(i)
+            self._load_anchor_info(i)
             self._capture_anchor_card()
             self._open_anchor_new_page()
             self._extract_anchor_new_page()
@@ -52,13 +52,6 @@ class AnchorProcessor:
             self._save_to_csv()
 
     # === 各步骤实现 ===
-    def _load_anchor_info(self, i: int):
-        """读取主播名称"""
-        anchor_card = self.main_page.locator(f".content-cell:nth-child({i}) .author-nickname:first-child").first
-        self.anchor_name = anchor_card.text_content().strip()
-        self.current_data["达人名称"] = self.anchor_name
-        print(f"\n🎯 开始处理主播: {self.anchor_name}")
-
     @with_captcha_handling()
     def _open_anchor_detail(self, i: int):
         """打开主播详情页面"""
@@ -66,6 +59,14 @@ class AnchorProcessor:
         card.wait_for(state="visible", timeout=5000)
         card.click(timeout=5000)
         print("✅ 已打开主播详情页面")
+
+    @with_captcha_handling()
+    def _load_anchor_info(self, i: int):
+        """读取主播名称"""
+        anchor_card = self.main_page.locator(f".content-cell:nth-child({i}) .author-nickname:first-child").first
+        self.anchor_name = anchor_card.text_content().strip()
+        self.current_data["达人名称"] = self.anchor_name
+        print(f"\n🎯 开始处理主播: {self.anchor_name}")
 
     @with_captcha_handling()
     def _capture_anchor_card(self):
