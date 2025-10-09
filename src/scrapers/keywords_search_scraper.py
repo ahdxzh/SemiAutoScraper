@@ -108,7 +108,8 @@ class KeywordsSearchScraper:
     # ===== 单页处理逻辑 =====
     def _process_page(self, page_number, limit_range, processor):
         """处理单页数据"""
-        jump_to_target_page(self.page, page_number)
+        input_selector = ".pagination .xt-input-number__input .el-input__inner"
+        jump_to_target_page(self.page, page_number, input_selector=input_selector)
         self.page.get_by_text(self.PAGE_TEXT).first.click()
         scroll_multiple_times(self.page)
 
