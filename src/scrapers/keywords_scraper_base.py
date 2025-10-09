@@ -74,7 +74,7 @@ class KeywordsSearchScraperBase(ABC):
         pass
 
     @abstractmethod
-    def _search_keyword(self, keyword: str):
+    def _search_keywords(self, keyword: str):
         """执行关键词搜索（各平台不同）"""
         pass
 

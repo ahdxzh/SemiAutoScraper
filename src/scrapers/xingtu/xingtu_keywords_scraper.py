@@ -18,7 +18,7 @@ class XingtuKeywordsSearchScraper(KeywordsSearchScraperBase):
     def create_processor(self):
         return AnchorProcessor(self.page)
 
-    def _search_keyword(self, keyword: str):
+    def _search_keywords(self, keyword: str):
         """平台特定的搜索逻辑"""
         logger.info(f"执行关键词搜索: {keyword}")
         self.page.get_by_text("内容找人").first.click()
