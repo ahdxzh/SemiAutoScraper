@@ -4,7 +4,7 @@ from functools import wraps
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
-from src.common import STEP_SLEEP_MIN_TIME, STEP_SLEEP_MAX_TIME
+from src.config import STEP_SLEEP_MIN_TIME, STEP_SLEEP_MAX_TIME
 from src.utils.page_status_check import check_captcha_status
 from src.utils.page_user_interaction import wait_for_user_action
 

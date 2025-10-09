@@ -1,0 +1,4 @@
+# 页码爬取步骤操作间隔
+STEP_SLEEP_MIN_TIME = 1
+STEP_SLEEP_MAX_TIME = 3
+
