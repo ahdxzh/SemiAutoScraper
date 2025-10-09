@@ -4,14 +4,13 @@ import platform
 import sys
 import tkinter as tk
 import uuid
+from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 from tkinter import ttk, messagebox, filedialog
-from collections import namedtuple
 
 from src.browser_manager import BrowserManager
 from src.common import request_queue, result_queue
 from src.scrapers.xingtu.xingtu_keywords_scraper import XingtuKeywordsSearchScraper
-
 from src.utils.dir_util import get_exe_dir_storage
 
 # 定义范围数据结构，使代码更具可读性
@@ -30,14 +29,31 @@ class ScraperGUI:
         "limit_end": "50"  # 范围结束值
     }
 
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         """初始化GUI实例，创建界面元素"""
         self.root = root
         self.style = ttk.Style()
-        self.runtime_data = self.load_runtime_data()
+        self.runtime_data: dict = self.load_runtime_data()
+        self.fonts: dict = {}
+
+        # === 提前声明所有实例属性，方便静态检查 ===
+        self.browser_var: tk.StringVar | None = None
+        self.browser_entry: ttk.Entry | None = None
+        self.keywords_var: tk.StringVar | None = None
+        self.keywords_entry: ttk.Entry | None = None
+        self.limit_start_var: tk.StringVar | None = None
+        self.limit_start_entry: ttk.Entry | None = None
+        self.limit_end_var: tk.StringVar | None = None
+        self.limit_end_entry: ttk.Entry | None = None
+        self.status_var: tk.StringVar | None = None
+
+        self.executor: ThreadPoolExecutor | None = None
+
+        # 初始化UI
         self.setup_ui_config()
         self.init_ui()
         self.bind_shortcuts()
+
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.check_message_queue()
 
@@ -132,8 +148,7 @@ class ScraperGUI:
 
         # 状态标签
         self.status_var = tk.StringVar(value="就绪")
-        ttk.Label(main_frame, textvariable=self.status_var, font=self.fonts["small"], foreground="#666666").pack(
-            anchor="w")
+        ttk.Label(main_frame, textvariable=self.status_var, font=self.fonts["small"], foreground="#666666").pack(anchor="w")
 
         # 按钮
         btn_frame = ttk.Frame(main_frame)
@@ -169,11 +184,9 @@ class ScraperGUI:
             return
 
         try:
-            # 转换为整数并验证范围有效性
             start_int = int(limit_start)
             end_int = int(limit_end)
 
-            # 确保起始值小于等于结束值且为正数
             if start_int > end_int:
                 request_id = str(uuid.uuid4())
                 request_queue.put(("warning", request_id, "提示", "起始值不能大于结束值！"))
@@ -189,10 +202,8 @@ class ScraperGUI:
             request_queue.put(("warning", request_id, "提示", "数量必须为整数！"))
             return
 
-        # 创建范围对象
         limit_range = LimitRange(start=start_int, end=end_int)
 
-        # 保存范围值到运行时数据
         self.runtime_data.update({
             "browser_path": browser_path,
             "keywords": keywords,
@@ -201,15 +212,8 @@ class ScraperGUI:
         })
         self.save_runtime_data()
 
-        # 提交任务到线程池，整体传递范围参数
-        self.executor.submit(
-            run_task,
-            browser_path,
-            keywords,
-            limit_range  # 作为一个整体传递
-        )
+        self.executor.submit(run_task, browser_path, keywords, limit_range)
 
-        # 更新提示信息
         request_id = str(uuid.uuid4())
         request_queue.put((
             "info",
@@ -257,10 +261,7 @@ class ScraperGUI:
 
             try:
                 if msg_type == "wait":
-                    messagebox.showinfo(
-                        title,
-                        f"{content}\n\n请在浏览器中完成操作后，\n点击本窗口的确定按钮继续..."
-                    )
+                    messagebox.showinfo(title, f"{content}\n\n请在浏览器中完成操作后，\n点击本窗口的确定按钮继续...")
                     result_queue.put((request_id, True))
                     print(f"[交互完成] 请求ID: {request_id} - 用户点击确定")
 
@@ -292,14 +293,12 @@ class ScraperGUI:
                 print(f"[处理弹窗出错] 请求ID: {request_id}，错误: {str(e)}")
                 result_queue.put((request_id, False))
 
-        self.root.after(100, self.check_message_queue)
+        self.root.after(100, self.check_message_queue)  # type: ignore
 
 
-# 任务函数接收整体范围参数
 def run_task(browser_path, keywords, limit_range):
     browser_manager = BrowserManager(browser_path)
     search_scraper = XingtuKeywordsSearchScraper(browser_manager)
-    # 使用命名元组的属性访问范围值
     search_scraper.run(keywords, limit_range)
 
 
