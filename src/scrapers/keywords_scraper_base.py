@@ -1,59 +1,58 @@
 import logging
 import time
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from playwright.sync_api import TimeoutError
 
-from src.scrapers.live_author_scraper import AnchorProcessor
 from src.utils.page_operate import scroll_multiple_times
 from src.utils.page_status_check import check_login_status, check_captcha_status
 from src.utils.page_user_interaction import wait_for_user_action
 from src.utils.page_util import jump_to_target_page
 
-# 配置日志
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ProcessingRange:
-    """处理范围数据类，使参数传递更清晰"""
     start: int
     end: int
 
 
-class KeywordsSearchScraper:
-    """精简结构版关键词搜索爬虫"""
+class KeywordsSearchScraperBase(ABC):
+    """关键词搜索爬虫模板类（Template Method Pattern）"""
+
     PAGE_SIZE = 20
-    SEARCH_WAIT_SECONDS = 60
     TASK_INTERVAL = 0.5
-    PAGE_TEXT = "达人信息"
-    TARGET_URL = "https://www.xingtu.cn/ad/creator/market"
-    PAGE_INPUT_SELECTOR = ".pagination .xt-input-number__input .el-input__inner"
+
+    TARGET_URL = None
+    PAGE_TEXT = None
+    PAGE_INPUT_SELECTOR = None
 
     def __init__(self, browser_manager):
         self.browser_manager = browser_manager
         self.page = browser_manager.context.new_page()
 
-    # ===== 核心工作流 =====
-    def search_task(self, keyword: str, limit_range: ProcessingRange):
-        """主流程：搜索 + 翻页 + 处理"""
+    # ======= 主模板流程 =======
+    def run(self, keyword: str, limit_range: ProcessingRange):
+        """完整执行流程"""
         if limit_range.start < 1 or limit_range.end < limit_range.start:
             raise ValueError(f"无效范围: {limit_range}")
 
-        logger.info(f"开始任务: 搜索'{keyword}' 数据范围 {limit_range.start}-{limit_range.end}")
-        processor = AnchorProcessor(self.page)
+        logger.info(f"开始任务: 搜索 '{keyword}' 数据范围 {limit_range.start}-{limit_range.end}")
+        processor = self.create_processor()
 
         try:
             self._prepare_page()
             self._search_keyword(keyword)
-
             start_page, end_page = self._page_range(limit_range)
             end_rank = 1
+
             for page_number in range(start_page, end_page + 1):
                 end_rank = self._process_page(page_number, limit_range, processor)
                 if end_rank >= limit_range.end:
@@ -68,9 +67,25 @@ class KeywordsSearchScraper:
         finally:
             self.browser_manager.close()
 
-    # ===== 页面初始化与检查 =====
+    # ======= 由子类实现的抽象方法 =======
+    @abstractmethod
+    def create_processor(self):
+        """创建具体数据处理器"""
+        pass
+
+    @abstractmethod
+    def _search_keyword(self, keyword: str):
+        """执行关键词搜索（各平台不同）"""
+        pass
+
+    @abstractmethod
+    def process_single_item(self, processor, item_index: int, rank: int):
+        """处理单个 item"""
+        pass
+
+    # ======= 通用逻辑 =======
     def _prepare_page(self):
-        """打开页面并确保登录与验证码正常"""
+        """加载页面并通过登录/验证码检查"""
         logger.info("加载目标页面中...")
         self.page.goto(self.TARGET_URL, timeout=60000)
         logger.info("页面加载完成")
@@ -78,7 +93,7 @@ class KeywordsSearchScraper:
         if not check_login_status(self.page):
             wait_for_user_action("请先登录")
             if not check_login_status(self.page):
-                raise Exception("用户未登录，无法继续执行任务")
+                raise Exception("用户未登录")
 
         if check_captcha_status(self.page):
             wait_for_user_action("请完成验证码验证")
@@ -87,28 +102,14 @@ class KeywordsSearchScraper:
 
         logger.info("登录与验证码状态检查通过")
 
-    # ===== 搜索逻辑 =====
-    def _search_keyword(self, keyword: str):
-        """执行关键词搜索"""
-        logger.info(f"执行关键词搜索: {keyword}")
-        self.page.get_by_text("内容找人").first.click()
-        box = self.page.get_by_role("textbox", name="按内容关键词找达人")
-        box.fill(keyword)
-        if self.SEARCH_WAIT_SECONDS > 0:
-            logger.info(f"等待 {self.SEARCH_WAIT_SECONDS} 秒供用户调整筛选条件")
-            time.sleep(self.SEARCH_WAIT_SECONDS)
-        box.press("Enter")
-
-    # ===== 页码逻辑 =====
     def _page_range(self, limit_range: ProcessingRange):
         start = (limit_range.start - 1) // self.PAGE_SIZE + 1
         end = (limit_range.end - 1) // self.PAGE_SIZE + 1
         logger.info(f"页码范围: {start}-{end}")
         return start, end
 
-    # ===== 单页处理逻辑 =====
     def _process_page(self, page_number, limit_range, processor):
-        """处理单页数据"""
+        """统一的翻页与循环逻辑"""
         jump_to_target_page(self.page, page_number, input_selector=self.PAGE_INPUT_SELECTOR)
         self.page.get_by_text(self.PAGE_TEXT).first.click()
         scroll_multiple_times(self.page)
@@ -129,7 +130,7 @@ class KeywordsSearchScraper:
         for item_index in range(start_item, end_item + 1):
             rank = start_rank + item_index - 1
             self.page.locator("body").focus()
-            processor.process_single_task(item_index, rank)
+            self.process_single_item(processor, item_index, rank)
             time.sleep(self.TASK_INTERVAL)
 
         return end_rank

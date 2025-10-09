@@ -10,7 +10,8 @@ from collections import namedtuple
 
 from src.browser_manager import BrowserManager
 from src.common import request_queue, result_queue
-from src.scrapers.keywords_search_scraper import KeywordsSearchScraper
+from src.scrapers.xingtu.xingtu_keywords_scraper import XingtuKeywordsSearchScraper
+
 from src.utils.dir_util import get_exe_dir_storage
 
 # 定义范围数据结构，使代码更具可读性
@@ -88,7 +89,7 @@ class ScraperGUI:
 
     def init_ui(self):
         """构建界面布局和组件"""
-        self.root.title("半自动化搜索工具")
+        self.root.title("数据采集工具")
         self.root.geometry("700x400")
         self.root.minsize(600, 350)
         self.root.resizable(True, True)
@@ -297,9 +298,9 @@ class ScraperGUI:
 # 任务函数接收整体范围参数
 def run_task(browser_path, keywords, limit_range):
     browser_manager = BrowserManager(browser_path)
-    search_scraper = KeywordsSearchScraper(browser_manager)
+    search_scraper = XingtuKeywordsSearchScraper(browser_manager)
     # 使用命名元组的属性访问范围值
-    search_scraper.search_task(keywords, limit_range)
+    search_scraper.run(keywords, limit_range)
 
 
 def start_gui():
