@@ -49,7 +49,7 @@ class KeywordsSearchScraperBase(ABC):
 
         try:
             self._prepare_page()
-            self._search_keyword(keyword)
+            self._search_keywords(keyword)
             start_page, end_page = self._page_range(limit_range)
             end_rank = 1
 
