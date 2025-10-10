@@ -24,10 +24,10 @@ class XingtuKeywordsSearchScraper(KeywordsSearchScraperBase):
         self.page.get_by_text("内容找人").first.click()
         box = self.page.get_by_role("textbox", name="按内容关键词找达人")
         box.fill(keyword)
+        box.press("Enter")
         if self.SEARCH_WAIT_SECONDS > 0:
             logger.info(f"等待 {self.SEARCH_WAIT_SECONDS} 秒供用户调整筛选条件")
             time.sleep(self.SEARCH_WAIT_SECONDS)
-        box.press("Enter")
 
     def process_single_item(self, processor, item_index: int, rank: int):
         processor.process_single_task(item_index, rank)

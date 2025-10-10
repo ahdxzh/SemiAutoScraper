@@ -40,11 +40,10 @@ class PgyKeywordsSearchScraper(KeywordsSearchScraperBase):
             # 输入关键词
             search_input.fill(keywords)
             logger.debug(f"已在搜索框中输入关键词: {keywords}")
-
+            search_input.press("Enter")
             if self.SEARCH_WAIT_SECONDS > 0:
                 logger.info(f"等待 {self.SEARCH_WAIT_SECONDS} 秒供用户调整筛选条件")
                 time.sleep(self.SEARCH_WAIT_SECONDS)
-            search_input.press("Enter")
 
         except Exception as e:
             logger.error(f"搜索操作失败: {str(e)}")
