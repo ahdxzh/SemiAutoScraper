@@ -110,6 +110,11 @@ class AnchorProcessor:
             timeout=5000
         )
 
+        # 截图订单卡片
+        order_card = self.anchor_page.locator("div.quote-info-cell div.price-box:nth-child(1)")
+        screenshot_path = f"outPut/订单截图/{self.rank}_{self.anchor_name}.png"
+        screenshot_element(self.anchor_page, locator=order_card, save_path=screenshot_path, timeout=10000)
+
         self.current_data["小红书ID"] = find_ancestor_texts_with_value(self.anchor_page, "小红书号", anchor_overview_wrapper)
         self.current_data["达人类型"] = find_ancestor_texts_with_value(self.anchor_page, "博主优势", anchor_overview_wrapper)
         self.current_data["内容主题"] = find_ancestor_texts_with_value(self.anchor_page, "内容类目", anchor_overview_wrapper)
