@@ -24,7 +24,7 @@ class AnchorProcessor:
     @staticmethod
     def _ensure_directories():
         """确保所有输出目录存在"""
-        for dir_path in ["outPut/曝光量", "outPut/达人主页", "outPut/订单截图"]:
+        for dir_path in ["outPut/星图/曝光量", "outPut/星图/达人主页", "outPut/星图/订单截图"]:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
 
     # === 主入口 ===
@@ -77,7 +77,7 @@ class AnchorProcessor:
             wrapper.wait_for(state="visible")
 
             # 截图
-            screenshot_path = f"outPut/曝光量/{self.rank}_{self.anchor_name}.png"
+            screenshot_path = f"outPut/星图/曝光量/{self.rank}_{self.anchor_name}.png"
             screenshot_element(self.main_page, locator=wrapper, save_path=screenshot_path, timeout=5000)
 
             # 视频链接
@@ -140,7 +140,7 @@ class AnchorProcessor:
     def _capture_anchor_home(self):
         """截图达人主页"""
         page = self.anchor_page
-        screenshot_path = f"outPut/达人主页/{self.rank}_{self.anchor_name}.png"
+        screenshot_path = f"outPut/星图/达人主页/{self.rank}_{self.anchor_name}.png"
         screenshot_element(page, screenshot_path, timeout=5000, crop_top=150)
         print(f"✅ 达人主页截图成功：{self.rank}_{self.anchor_name}.png")
 
@@ -165,7 +165,7 @@ class AnchorProcessor:
 
             # 截图订单卡片
             order_card = self.order_page.locator(".selected-author-list.select-author-list")
-            screenshot_path = f"outPut/订单截图/{self.rank}_{self.anchor_name}.png"
+            screenshot_path = f"outPut/星图/订单截图/{self.rank}_{self.anchor_name}.png"
             screenshot_element(self.order_page, locator=order_card, save_path=screenshot_path, timeout=10000)
 
             # 提取订单信息
@@ -193,6 +193,6 @@ class AnchorProcessor:
         save_single_dict_to_csv(
             self.current_data,
             primary_key="达人名称",
-            save_path="outPut/数据总结.csv"
+            save_path="outPut/星图/数据总结.csv"
         )
         print(f"✅ 数据已保存: {self.anchor_name}")

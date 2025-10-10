@@ -27,9 +27,10 @@ class AnchorProcessor:
     def _ensure_directories():
         """确保所有输出目录存在"""
         directories = [
-            "outPut/曝光量",
-            "outPut/数据概览",
-            "outPut/粉丝画像"
+            "outPut/蒲公英/曝光量",
+            "outPut/蒲公英/订单截图",
+            "outPut/蒲公英/数据概览",
+            "outPut/蒲公英/粉丝画像"
         ]
         for dir_path in directories:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
@@ -59,7 +60,7 @@ class AnchorProcessor:
         note_wrapper = self.anchor_page.locator("div.d-drawer-content")
         note_wrapper.wait_for(state="visible")
         # 截图曝光量
-        screenshot_path = f"outPut/曝光量/{self.rank}_{self.anchor_name}.png"
+        screenshot_path = f"outPut/蒲公英/曝光量/{self.rank}_{self.anchor_name}.png"
         screenshot_element(
             page=self.anchor_page,
             locator=note_wrapper,
@@ -102,7 +103,7 @@ class AnchorProcessor:
         data_overview_tab.click()
         anchor_overview_wrapper = self.anchor_page.locator(".blogger-detail-container")
         anchor_overview_wrapper.wait_for(state="visible")
-        screenshot_path = f"outPut/数据概览/{self.rank}_{self.anchor_name}.png"
+        screenshot_path = f"outPut/蒲公英/数据概览/{self.rank}_{self.anchor_name}.png"
         screenshot_element(
             page=self.anchor_page,
             save_path=screenshot_path,
@@ -112,7 +113,7 @@ class AnchorProcessor:
 
         # 截图订单卡片
         order_card = self.anchor_page.locator("div.quote-info-cell div.price-box:nth-child(1)")
-        screenshot_path = f"outPut/订单截图/{self.rank}_{self.anchor_name}.png"
+        screenshot_path = f"outPut/蒲公英/订单截图/{self.rank}_{self.anchor_name}.png"
         screenshot_element(self.anchor_page, locator=order_card, save_path=screenshot_path, timeout=10000)
 
         self.current_data["小红书ID"] = find_ancestor_texts_with_value(self.anchor_page, "小红书号", anchor_overview_wrapper)
@@ -132,7 +133,7 @@ class AnchorProcessor:
         scroll_multiple_times(self.anchor_page, total_scrolls=1, key_presses_per_scroll=18)
         anchor_overview_wrapper = self.anchor_page.locator(".blogger-detail-container")
         anchor_overview_wrapper.wait_for(state="visible")
-        screenshot_path = f"outPut/粉丝画像/{self.rank}_{self.anchor_name}.png"
+        screenshot_path = f"outPut/蒲公英/粉丝画像/{self.rank}_{self.anchor_name}.png"
         screenshot_element(
             page=self.anchor_page,
             save_path=screenshot_path,
@@ -176,5 +177,5 @@ class AnchorProcessor:
             if self.anchor_page and not self.anchor_page.is_closed():
                 self.anchor_page.close()
 
-        save_path = "outPut/数据总结.csv"
+        save_path = "outPut/蒲公英/数据总结.csv"
         save_single_dict_to_csv(self.current_data, primary_key="达人名称", save_path=save_path)
